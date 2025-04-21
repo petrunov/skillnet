@@ -26,7 +26,6 @@ class AuthTests(TestCase):
             "username": "testuser",
             "email": "test@example.com",
             "password": "StrongPass123!",
-            "password2": "StrongPass123!",
             "account_type": "contractor",
             "full_name": "Test User",
             "company_name": ""
@@ -97,7 +96,7 @@ class AuthTests(TestCase):
         new_password = 'NewPass123!'
         response = self.client.post(
             self.password_reset_confirm_url(uid, token),
-            {'password': new_password, 'password2': new_password},
+            {'password': new_password},
             format='json'
         )
         self.assertEqual(response.status_code, 200)
