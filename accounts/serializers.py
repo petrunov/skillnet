@@ -9,13 +9,8 @@ class RegistrationSerializer(serializers.ModelSerializer):
         write_only=True,
         required=True,
         validators=[validate_password],
-        style={'input_type': 'password'}
-    )
-    password2 = serializers.CharField(
-        write_only=True,
-        required=True,
         style={'input_type': 'password'},
-        help_text='Enter the same password as above, for verification.'
+        help_text='Enter a secure password.'
     )
 
     class Meta:
@@ -24,27 +19,31 @@ class RegistrationSerializer(serializers.ModelSerializer):
             'username',
             'email',
             'password',
-            'password2',
             'account_type',
             'full_name',
             'company_name',
         )
 
-    def validate(self, attrs):
-        if attrs['password'] != attrs['password2']:
-            raise serializers.ValidationError(
-                {'password2': "The two password fields didn't match."}
-            )
-        return attrs
-
     def create(self, validated_data):
-        validated_data.pop('password2')
         password = validated_data.pop('password')
         user = User(**validated_data)
         user.set_password(password)
         user.save()
         return user
-    
 
 class LogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField(help_text="Refresh JWT to blacklist")
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField(help_text="Email associated with your account")
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    password = serializers.CharField(
+        write_only=True,
+        style={'input_type': 'password'},
+        help_text='New password'
+    )
+
+    def validate_password(self, value):
+        validate_password(value)
+        return value

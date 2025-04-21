@@ -1,28 +1,30 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
-from django.contrib.auth.password_validation import validate_password
 from django.core.mail import send_mail
 from django.conf import settings
 
 from rest_framework import status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
+
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
+
 from drf_yasg.utils import swagger_auto_schema
-from .serializers import LogoutSerializer
+
+from .serializers import (
+    RegistrationSerializer,
+    LogoutSerializer,
+    PasswordResetRequestSerializer,
+    PasswordResetConfirmSerializer,
+)
 
 from django.shortcuts import get_object_or_404
 
-from .serializers import (
-    LogoutSerializer,
-    RegistrationSerializer,
-)
-
 User = get_user_model()
 
-# 1. Registration Endpoint
+# 1. Registration
 class RegistrationView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -31,7 +33,10 @@ class RegistrationView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save(is_active=False)
         token = default_token_generator.make_token(user)
-        activation_link = f"{request.scheme}://{request.get_host()}/api/accounts/activate/{user.pk}/{token}/"
+        activation_link = (
+            f"{request.scheme}://{request.get_host()}"
+            f"/api/accounts/activate/{user.pk}/{token}/"
+        )
         send_mail(
             subject="Activate your account",
             message=f"Click the link to activate your account: {activation_link}",
@@ -44,7 +49,7 @@ class RegistrationView(APIView):
             status=status.HTTP_201_CREATED
         )
 
-# 2. Activation Endpoint
+# 2. Activation
 class ActivationView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -54,20 +59,10 @@ class ActivationView(APIView):
             if not user.is_active:
                 user.is_active = True
                 user.save()
-                return Response(
-                    {"detail": "Account activated successfully."},
-                    status=status.HTTP_200_OK
-                )
-            return Response(
-                {"detail": "Account already activated."},
-                status=status.HTTP_200_OK
-            )
-        return Response(
-            {"detail": "Invalid or expired token."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+            return Response({"detail": "Account activated."}, status=status.HTTP_200_OK)
+        return Response({"detail": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
 
-# 3. JWT Login Endpoint
+# 3. JWT Login
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
@@ -81,54 +76,57 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
     permission_classes = [permissions.AllowAny]
 
-# 4. Password Reset Request Endpoint
+# 4. Password Reset Request
 class PasswordResetRequestView(APIView):
     permission_classes = [permissions.AllowAny]
 
+    @swagger_auto_schema(request_body=PasswordResetRequestSerializer)
     def post(self, request):
-        email = request.data.get('email')
-        if not email:
-            return Response({'email': 'This field is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+
+        # Always return success; do not reveal existence
         try:
             user = User.objects.get(email=email)
+            token = default_token_generator.make_token(user)
+            reset_link = (
+                f"{request.scheme}://{request.get_host()}"
+                f"/api/accounts/password-reset-confirm/{user.pk}/{token}/"
+            )
+            send_mail(
+                subject="Password Reset Request",
+                message=f"Use the following link to reset your password: {reset_link}",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
         except User.DoesNotExist:
-            return Response({
-                'detail': 'If an account with that email exists, a password reset link has been sent.'
-            }, status=status.HTTP_200_OK)
-        token = default_token_generator.make_token(user)
-        reset_link = f"{request.scheme}://{request.get_host()}/api/accounts/password-reset-confirm/{user.pk}/{token}/"
-        send_mail(
-            subject="Password Reset Request",
-            message=f"Use the following link to reset your password: {reset_link}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=False,
-        )
-        return Response({'detail': 'Password reset email sent.'}, status=status.HTTP_200_OK)
+            pass
 
-# 5. Password Reset Confirm Endpoint
+        return Response(
+            {'detail': 'If an account with that email exists, a reset link has been sent.'},
+            status=status.HTTP_200_OK
+        )
+
+# 5. Password Reset Confirm
 class PasswordResetConfirmView(APIView):
     permission_classes = [permissions.AllowAny]
 
+    @swagger_auto_schema(request_body=PasswordResetConfirmSerializer)
     def post(self, request, uid, token):
-        password = request.data.get('password')
-        password2 = request.data.get('password2')
-        if not password or not password2:
-            return Response({'password': 'Both password fields are required.'}, status=status.HTTP_400_BAD_REQUEST)
-        if password != password2:
-            return Response({'password2': "The two password fields didn't match."}, status=status.HTTP_400_BAD_REQUEST)
-        try:
-            validate_password(password)
-        except Exception as e:
-            return Response({'password': e.messages}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
         user = get_object_or_404(User, pk=uid)
         if not default_token_generator.check_token(user, token):
-            return Response({'detail': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
-        user.set_password(password)
-        user.save()
-        return Response({'detail': 'Password has been reset successfully.'}, status=status.HTTP_200_OK)
+            return Response({"detail": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
 
-# 6. Logout / Token Blacklist Endpoint
+        user.set_password(serializer.validated_data['password'])
+        user.save()
+        return Response({"detail": "Password has been reset successfully."}, status=status.HTTP_200_OK)
+
+# 6. Logout
 class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -139,13 +137,8 @@ class LogoutView(APIView):
     def post(self, request):
         serializer = LogoutSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        refresh_token = serializer.validated_data['refresh']
         try:
-            # ← this must be a refresh token, not an access token
-            RefreshToken(refresh_token).blacklist()
+            RefreshToken(serializer.validated_data['refresh']).blacklist()
         except Exception:
-            return Response(
-                {'detail': 'Invalid or expired token.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'detail': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
         return Response(status=status.HTTP_204_NO_CONTENT)
