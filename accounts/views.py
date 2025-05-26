@@ -28,6 +28,7 @@ User = get_user_model()
 class RegistrationView(APIView):
     permission_classes = [permissions.AllowAny]
 
+    @swagger_auto_schema(request_body=RegistrationSerializer)
     def post(self, request):
         serializer = RegistrationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -48,6 +49,7 @@ class RegistrationView(APIView):
             {"detail": "Registration successful. Check your email to activate your account."},
             status=status.HTTP_201_CREATED
         )
+
 
 # 2. Activation
 class ActivationView(APIView):

@@ -16,7 +16,6 @@ class RegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'username',
             'email',
             'password',
             'account_type',
@@ -28,14 +27,18 @@ class RegistrationSerializer(serializers.ModelSerializer):
         password = validated_data.pop('password')
         user = User(**validated_data)
         user.set_password(password)
+        user.is_active = False
         user.save()
         return user
+
 
 class LogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField(help_text="Refresh JWT to blacklist")
 
+
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField(help_text="Email associated with your account")
+
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
     password = serializers.CharField(

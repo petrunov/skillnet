@@ -1,14 +1,18 @@
-from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.db import models
 
 class User(AbstractUser):
+    # remove the inherited username field
+    username = None
+
+    # make email the unique identifier
     email = models.EmailField(
         'email address',
-        max_length=254,
         unique=True,
         blank=False,
-        help_text='Required. Enter a valid email address.',
+        max_length=254,
     )
+
     ACCOUNT_TYPE_CHOICES = (
         ('company', 'Company'),
         ('contractor', 'Contractor'),
@@ -29,8 +33,12 @@ class User(AbstractUser):
         help_text="If a company account, the registered company name."
     )
 
+    # tell Django to use email for login
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = []  # no other required fields at create-user time
+
     def save(self, *args, **kwargs):
-        # ensure contractor accounts don't persist a company_name
+        # contractors shouldn’t have a company name
         if self.account_type == 'contractor':
             self.company_name = None
         super().save(*args, **kwargs)
