@@ -6,6 +6,7 @@ from django.conf import settings
 from rest_framework import status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.renderers import JSONRenderer
 
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -27,6 +28,7 @@ User = get_user_model()
 # 1. Registration
 class RegistrationView(APIView):
     permission_classes = [permissions.AllowAny]
+    renderer_classes = [JSONRenderer]
 
     @swagger_auto_schema(request_body=RegistrationSerializer)
     def post(self, request):
@@ -50,10 +52,10 @@ class RegistrationView(APIView):
             status=status.HTTP_201_CREATED
         )
 
-
 # 2. Activation
 class ActivationView(APIView):
     permission_classes = [permissions.AllowAny]
+    renderer_classes = [JSONRenderer]
 
     def get(self, request, uid, token):
         user = get_object_or_404(User, pk=uid)
@@ -77,10 +79,12 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
     permission_classes = [permissions.AllowAny]
+    renderer_classes = [JSONRenderer]
 
 # 4. Password Reset Request
 class PasswordResetRequestView(APIView):
     permission_classes = [permissions.AllowAny]
+    renderer_classes = [JSONRenderer]
 
     @swagger_auto_schema(request_body=PasswordResetRequestSerializer)
     def post(self, request):
@@ -88,13 +92,12 @@ class PasswordResetRequestView(APIView):
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data['email']
 
-        # Always return success; do not reveal existence
         try:
             user = User.objects.get(email=email)
             token = default_token_generator.make_token(user)
             reset_link = (
-                f"{request.scheme}://{request.get_host()}"
-                f"/api/accounts/password-reset-confirm/{user.pk}/{token}/"
+                f"http://localhost:3000"
+                f"/en/login/password-reset/confirm/{user.pk}/{token}/"
             )
             send_mail(
                 subject="Password Reset Request",
@@ -114,6 +117,7 @@ class PasswordResetRequestView(APIView):
 # 5. Password Reset Confirm
 class PasswordResetConfirmView(APIView):
     permission_classes = [permissions.AllowAny]
+    renderer_classes = [JSONRenderer]
 
     @swagger_auto_schema(request_body=PasswordResetConfirmSerializer)
     def post(self, request, uid, token):
@@ -131,6 +135,7 @@ class PasswordResetConfirmView(APIView):
 # 6. Logout
 class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    renderer_classes = [JSONRenderer]
 
     @swagger_auto_schema(
         request_body=LogoutSerializer,
