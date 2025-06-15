@@ -36,10 +36,15 @@ class RegistrationView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save(is_active=False)
         token = default_token_generator.make_token(user)
+        # ToDo update the activation link to your frontend URL
         activation_link = (
-            f"{request.scheme}://{request.get_host()}"
-            f"/api/accounts/activate/{user.pk}/{token}/"
+                f"http://localhost:3000"
+                f"/en/register/activate/{user.pk}/{token}/"
         )
+        # activation_link = (
+        #     f"{request.scheme}://{request.get_host()}"
+        #     f"/api/accounts/activate/{user.pk}/{token}/"
+        # )
         send_mail(
             subject="Activate your account",
             message=f"Click the link to activate your account: {activation_link}",
@@ -48,7 +53,7 @@ class RegistrationView(APIView):
             fail_silently=False,
         )
         return Response(
-            {"detail": "Registration successful. Check your email to activate your account."},
+            {"code": "registrationSuccessful", "detail": "Registration successful. Check your email to activate your account."},
             status=status.HTTP_201_CREATED
         )
 
@@ -63,8 +68,8 @@ class ActivationView(APIView):
             if not user.is_active:
                 user.is_active = True
                 user.save()
-            return Response({"detail": "Account activated."}, status=status.HTTP_200_OK)
-        return Response({"detail": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"code": "accountActivated", "detail": "Account activated."}, status=status.HTTP_200_OK)
+        return Response({"code": "invalidOrExpiredToken", "detail": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
 
 # 3. JWT Login
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -95,6 +100,7 @@ class PasswordResetRequestView(APIView):
         try:
             user = User.objects.get(email=email)
             token = default_token_generator.make_token(user)
+            # ToDo update the reset link to your frontend URL
             reset_link = (
                 f"http://localhost:3000"
                 f"/en/login/password-reset/confirm/{user.pk}/{token}/"
@@ -110,7 +116,7 @@ class PasswordResetRequestView(APIView):
             pass
 
         return Response(
-            {'detail': 'If an account with that email exists, a reset link has been sent.'},
+            {"code": "resetLinkSent", 'detail': 'If an account with that email exists, a reset link has been sent.'},
             status=status.HTTP_200_OK
         )
 
@@ -126,11 +132,11 @@ class PasswordResetConfirmView(APIView):
 
         user = get_object_or_404(User, pk=uid)
         if not default_token_generator.check_token(user, token):
-            return Response({"detail": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"code": "invalidOrExpiredToken", "detail": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
 
         user.set_password(serializer.validated_data['password'])
         user.save()
-        return Response({"detail": "Password has been reset successfully."}, status=status.HTTP_200_OK)
+        return Response({"code": "passwordResetSuccessfully", "detail": "Password has been reset successfully."}, status=status.HTTP_200_OK)
 
 # 6. Logout
 class LogoutView(APIView):
@@ -147,5 +153,5 @@ class LogoutView(APIView):
         try:
             RefreshToken(serializer.validated_data['refresh']).blacklist()
         except Exception:
-            return Response({'detail': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"code": "invalidOrExpiredToken", 'detail': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
         return Response(status=status.HTTP_204_NO_CONTENT)
