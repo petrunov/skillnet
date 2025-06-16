@@ -1,8 +1,12 @@
+# accounts/serializers.py
+
 from django.contrib.auth import get_user_model
-from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
+from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 User = get_user_model()
+
 
 class RegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
@@ -30,6 +34,22 @@ class RegistrationSerializer(serializers.ModelSerializer):
         user.is_active = False
         user.save()
         return user
+
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    # tell SimpleJWT to use `email` for authentication
+    username_field = User.EMAIL_FIELD  # typically 'email'
+
+    def validate(self, attrs):
+        # attrs will contain 'email' & 'password'
+        data = super().validate(attrs)
+
+        # add extra returned data
+        data.update({
+            'email': self.user.email,
+            'account_type': self.user.account_type,
+        })
+        return data
 
 
 class LogoutSerializer(serializers.Serializer):

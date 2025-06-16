@@ -11,6 +11,7 @@ from rest_framework.renderers import JSONRenderer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
+from .serializers import CustomTokenObtainPairSerializer
 
 from drf_yasg.utils import swagger_auto_schema
 
@@ -155,3 +156,11 @@ class LogoutView(APIView):
         except Exception:
             return Response({"code": "invalidOrExpiredToken", 'detail': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    """
+    POST /api/accounts/login/  with { "email": "...", "password": "..." }
+    """
+    serializer_class = CustomTokenObtainPairSerializer
+    permission_classes = [permissions.AllowAny]
+    renderer_classes = [JSONRenderer]
