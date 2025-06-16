@@ -8,14 +8,14 @@ DATABASES = {
         "ENGINE":   "django.db.backends.mysql",
         "NAME":     env('DATABASE_NAME'),
         "USER":     env('DATABASE_USER'),
-        "PASSWORD": '%$S$Qz-=+8bV&uDH',
+        "PASSWORD": env('DATABASE_PASSWORD'),
         "HOST":     env('DATABASE_HOST', default='localhost'),
         "PORT":     env('DATABASE_PORT', default='3306'),
         "OPTIONS": {
             "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
         },
     }
-}
+}Z
 
 # Use real SMTP settings in production
 # EMAIL_BACKEND        = os.environ['EMAIL_BACKEND']
