@@ -13,7 +13,16 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 ALLOWED_HOSTS = env('ALLOWED_HOSTS').split(',')
 # pull in env vars or sensible defaults
 SECRET_KEY = env('SECRET_KEY')
-DEBUG = env('DEBUG')
+DEBUG = env.bool('DEBUG')
+HOST = env('HOST', default='https://savangel.com')
+EMAIL_BACKEND = env('EMAIL_BACKEND')
+
+
+print("⚙️  Loaded .env:", {
+    "DEBUG": env.bool("DEBUG", default=None),
+    "EMAIL_BACKEND": env("EMAIL_BACKEND", default=None),
+    "HOST": env("HOST", default=None),
+})
 
 # Applications
 INSTALLED_APPS = [

@@ -5,9 +5,7 @@ from .base import *
 # EMAIL_HOST_USER      = env('EMAIL_HOST_USER')
 # EMAIL_HOST_PASSWORD  = env('EMAIL_HOST_PASSWORD')
 # EMAIL_USE_TLS        = env('EMAIL_USE_TLS')
-EMAIL_BACKEND        = env('EMAIL_BACKEND')
 DEFAULT_FROM_EMAIL   = env('DEFAULT_FROM_EMAIL')
-
 
 # Enable CORS for your React frontend
 INSTALLED_APPS += ['corsheaders']

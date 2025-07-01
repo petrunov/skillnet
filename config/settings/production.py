@@ -2,13 +2,12 @@ import os
 from .base import *
 
 # Production overrides
-DEBUG = True
+DEBUG = False
 DATABASES = {
     "default": {
         "ENGINE":   "django.db.backends.mysql",
         "NAME":     env('DATABASE_NAME'),
         "USER":     env('DATABASE_USER'),
-        "PASSWORD": '%$S$Qz-=+8bV&uDH', #env('DATABASE_PASSWORD'),
         "HOST":     env('DATABASE_HOST', default='localhost'),
         "PORT":     env('DATABASE_PORT', default='3306'),
         "OPTIONS": {
@@ -18,7 +17,6 @@ DATABASES = {
 }
 
 # Use real SMTP settings in production
-EMAIL_BACKEND        = env('EMAIL_BACKEND')
 EMAIL_HOST           = env('EMAIL_HOST')
 EMAIL_PORT           = int(env('EMAIL_PORT'))
 EMAIL_HOST_USER      = env('EMAIL_HOST_USER')

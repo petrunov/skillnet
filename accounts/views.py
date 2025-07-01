@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.conf import settings
+from accounts.utils import get_request_language
 
 from rest_framework import status, permissions
 from rest_framework.views import APIView
@@ -37,10 +38,11 @@ class RegistrationView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save(is_active=False)
         token = default_token_generator.make_token(user)
-        # ToDo update the activation link to your frontend URL
+        # Use dynamic language code in activation link
+        lang = get_request_language(request)
         activation_link = (
-                f"http://localhost:3000"
-                f"/en/register/activate/{user.pk}/{token}/"
+                f"{settings.HOST}"
+                f"/{lang}/register/activate/{user.pk}/{token}/"
         )
         # activation_link = (
         #     f"{request.scheme}://{request.get_host()}"
@@ -101,10 +103,11 @@ class PasswordResetRequestView(APIView):
         try:
             user = User.objects.get(email=email)
             token = default_token_generator.make_token(user)
-            # ToDo update the reset link to your frontend URL
+            # Use dynamic language code in reset link
+            lang = get_request_language(request)
             reset_link = (
-                f"http://localhost:3000"
-                f"/en/login/password-reset/confirm/{user.pk}/{token}/"
+                f"{settings.HOST}"
+                f"/{lang}/login/password-reset/confirm/{user.pk}/{token}/"
             )
             send_mail(
                 subject="Password Reset Request",
