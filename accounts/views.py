@@ -3,27 +3,25 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.conf import settings
 from accounts.utils import get_request_language
-
 from rest_framework import status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer
-
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import CustomTokenObtainPairSerializer
-
 from drf_yasg.utils import swagger_auto_schema
-
 from .serializers import (
     RegistrationSerializer,
     LogoutSerializer,
     PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer,
+    CustomTokenObtainPairSerializer,
 )
-
 from django.shortcuts import get_object_or_404
+import logging
+
+logger = logging.getLogger('django')
 
 User = get_user_model()
 
@@ -38,23 +36,23 @@ class RegistrationView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save(is_active=False)
         token = default_token_generator.make_token(user)
-        # Use dynamic language code in activation link
         lang = get_request_language(request)
         activation_link = (
-                f"{settings.HOST}"
-                f"/{lang}/register/activate/{user.pk}/{token}/"
+            f"{settings.HOST}"
+            f"/{lang}/register/activate/{user.pk}/{token}/"
         )
-        # activation_link = (
-        #     f"{request.scheme}://{request.get_host()}"
-        #     f"/api/accounts/activate/{user.pk}/{token}/"
-        # )
-        send_mail(
-            subject="Activate your account",
-            message=f"Click the link to activate your account: {activation_link}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            fail_silently=False,
-        )
+        try:
+            send_mail(
+                subject="Activate your account",
+                message=f"Click the link to activate your account: {activation_link}",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            logger.error("Registration email failed", exc_info=e)
+            raise
+
         return Response(
             {"code": "registrationSuccessful", "detail": "Registration successful. Check your email to activate your account."},
             status=status.HTTP_201_CREATED
@@ -103,19 +101,22 @@ class PasswordResetRequestView(APIView):
         try:
             user = User.objects.get(email=email)
             token = default_token_generator.make_token(user)
-            # Use dynamic language code in reset link
             lang = get_request_language(request)
             reset_link = (
                 f"{settings.HOST}"
                 f"/{lang}/login/password-reset/confirm/{user.pk}/{token}/"
             )
-            send_mail(
-                subject="Password Reset Request",
-                message=f"Use the following link to reset your password: {reset_link}",
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-                fail_silently=False,
-            )
+            try:
+                send_mail(
+                    subject="Password Reset Request",
+                    message=f"Use the following link to reset your password: {reset_link}",
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[email],
+                    fail_silently=False,
+                )
+            except Exception as e:
+                logger.error("Password reset email failed", exc_info=e)
+                raise
         except User.DoesNotExist:
             pass
 
@@ -159,11 +160,3 @@ class LogoutView(APIView):
         except Exception:
             return Response({"code": "invalidOrExpiredToken", 'detail': 'Invalid or expired token.'}, status=status.HTTP_400_BAD_REQUEST)
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-class CustomTokenObtainPairView(TokenObtainPairView):
-    """
-    POST /api/accounts/login/  with { "email": "...", "password": "..." }
-    """
-    serializer_class = CustomTokenObtainPairSerializer
-    permission_classes = [permissions.AllowAny]
-    renderer_classes = [JSONRenderer]

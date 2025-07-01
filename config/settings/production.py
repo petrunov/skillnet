@@ -8,6 +8,7 @@ DATABASES = {
         "ENGINE":   "django.db.backends.mysql",
         "NAME":     env('DATABASE_NAME'),
         "USER":     env('DATABASE_USER'),
+        "PASSWORD": env('DATABASE_PASSWORD'),
         "HOST":     env('DATABASE_HOST', default='localhost'),
         "PORT":     env('DATABASE_PORT', default='3306'),
         "OPTIONS": {
@@ -16,10 +17,11 @@ DATABASES = {
     }
 }
 
+
 # Use real SMTP settings in production
 EMAIL_HOST           = env('EMAIL_HOST')
 EMAIL_PORT           = int(env('EMAIL_PORT'))
-EMAIL_HOST_USER      = env('EMAIL_HOST_USER')
+EMAIL_HOST_USER      = 'noreply@savangel.com' #env('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD  = env('EMAIL_HOST_PASSWORD')
 EMAIL_USE_TLS        = env.bool('EMAIL_USE_TLS')
 EMAIL_USE_SSL        = env.bool('EMAIL_USE_SSL')
